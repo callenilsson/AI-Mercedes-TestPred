@@ -6,11 +6,12 @@ import pandas as pd
 
 #Load Data
 train = pd.read_csv('../Data/train.csv')
+test = pd.read_csv('../Data/test.csv')
 trainX = train.drop('y', 1).drop('ID', 1).as_matrix()
 trainY = train.y.as_matrix()
-testX = pd.read_csv('../Data/test.csv').drop('ID', 1).as_matrix()
+testX = test.drop('ID', 1).as_matrix()
 
-#Get strings from data as dictionary
+#Get unique strings from data as dictionary
 chars = {}
 for i in range(0, len(trainX)):
     for j in range(0, 8):
@@ -44,17 +45,19 @@ for i in range(0, len(testX)):
 
 #Hyperparameters
 n_features = len(trainX2[0])
-epochs = 1
-batch_size = 1000
+epochs = 20
+batch_size = 100
 dropout = 0.5
-n_neurons = 2000
+n_neurons = 5000
+n_hidden_layers = 2
 
 #Neural network
 model = Sequential()
 model.add(Dense(n_neurons, input_dim=n_features, activation='relu'))
 model.add(Dropout(dropout))
-model.add(Dense(int(n_neurons/2), input_dim=n_features, activation='relu'))
-model.add(Dropout(dropout))
+for i in range(0,n_hidden_layers):
+    model.add(Dense(n_neurons, activation='relu'))
+    model.add(Dropout(dropout))
 model.add(Dense(1, activation='relu'))
 
 model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
@@ -72,7 +75,7 @@ f = open("../Data/keras_predictions", 'w')
 f.write("ID,y\n")
 counter = 0
 for val in np.nditer(predictions):
-    f.write(str(train.ID[counter]) + "," + str(val) + "\n")
+    f.write(str(test.ID[counter]) + "," + str(val) + "\n")
     counter += 1
 f.close()
 print("Done!")
