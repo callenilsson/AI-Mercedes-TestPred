@@ -4,7 +4,7 @@ from keras.layers import *
 from keras.optimizers import *
 import pandas as pd
 
-#Custom R2 loss used in Kaggle (Ddidn't work that well?)
+#Custom R2 loss used in Kaggle (Didn't work that well?)
 def r2_score(y_true, y_pred):
     SS_res =  K.sum(K.square(y_true - y_pred))
     SS_tot = K.sum(K.square(y_true - K.mean(y_true)))
@@ -38,16 +38,47 @@ for key in chars:
 
 #Replace the 1-8 columns that has strings with one hot encoding vectors.
 #This makes the train/test len(chars_vec)=54 * 8 times wider though
-trainX2 = np.zeros((len(trainX), len(trainX[0]) - 8 + 8*len(chars_vec)))
-testX2 = np.zeros((len(testX), len(testX[0]) - 8 + 8*len(chars_vec)))
+trainX2 = np.zeros((len(trainX), len(trainX[0]) - 8 + 8*len(chars_vec) + 8))
+testX2 = np.zeros((len(testX), len(testX[0]) - 8 + 8*len(chars_vec) + 8))
 for i in range(0, len(trainX)):
     for j in range(0, 8):
         trainX2[i, j*len(chars_vec) : (j+1)*len(chars_vec)] = chars[trainX[i,j]]
-        trainX2[i, 8*len(chars_vec) : len(trainX2)] = trainX[i,8:]
+        trainX2[i, 8*len(chars_vec) : len(trainX2[0]) - 8] = trainX[i,8:]
 for i in range(0, len(testX)):
     for j in range(0, 8):
         testX2[i, j*len(chars_vec) : (j+1)*len(chars_vec)] = chars[testX[i,j]]
-        testX2[i, 8*len(chars_vec) : len(testX2)] = testX[i,8:]
+        testX2[i, 8*len(chars_vec) : len(testX2[0]) - 8] = testX[i,8:]
+
+#EXTRA FEATURE
+# Calculate mean time based on car model (Mean of Y based on X0 - X8)
+charsYMeanVec = []
+charsY = {}
+charsCount = {}
+for i in range(0,8):
+    charsYMeanVec.append({})
+    #Reset dictionaries
+    for key in chars:
+        charsY[key] = 0
+        charsCount[key] = 0
+        charsYMeanVec[i][key] = 0
+    #Calculate sum of Y and its occurences
+    for j in range(0, len(trainX)):
+        charsCount[trainX[j,i]] += 1
+        charsY[trainX[j,i]] += trainY[j]
+    #Calculate mean of Y
+    for key in charsCount:
+        try:
+            charsYMeanVec[i][key] = charsY[key] / charsCount[key]
+        except:
+            b = 0
+
+#Add the Y means to final vector
+for i in range(0,len(trainX2)):
+    for j in range(0,8):
+        trainX2[i, j + len(trainX2[0]) - 8] = charsYMeanVec[j][trainX[i,j]]
+for i in range(0, len(trainX2)):
+    for j in range(0, 8):
+        testX2[i, j + len(testX2[0]) - 8] = charsYMeanVec[j][testX[i, j]]
 
 #Hyperparameters
 n_features = len(trainX2[0])
