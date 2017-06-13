@@ -4,6 +4,12 @@ from keras.layers import *
 from keras.optimizers import *
 import pandas as pd
 
+#Custom R2 loss used in Kaggle (Ddidn't work that well?)
+def r2_score(y_true, y_pred):
+    SS_res =  K.sum(K.square(y_true - y_pred))
+    SS_tot = K.sum(K.square(y_true - K.mean(y_true)))
+    return -1.0 * (1 - SS_res / (SS_tot + K.epsilon()))
+
 #Load Data
 train = pd.read_csv('../Data/train.csv')
 test = pd.read_csv('../Data/test.csv')
@@ -16,6 +22,9 @@ chars = {}
 for i in range(0, len(trainX)):
     for j in range(0, 8):
         chars[trainX[i,j]] = 0
+for i in range(0, len(testX)):
+    for j in range(0, 8):
+        chars[testX[i, j]] = 0
 
 #One hot encode each string in the dictionary as numpy arrays
 chars_vec = sorted(list(chars.keys()))
@@ -37,19 +46,16 @@ for i in range(0, len(trainX)):
         trainX2[i, 8*len(chars_vec) : len(trainX2)] = trainX[i,8:]
 for i in range(0, len(testX)):
     for j in range(0, 8):
-        try:
-            testX2[i, j*len(chars_vec) : (j+1)*len(chars_vec)] = chars[testX[i,j]]
-            testX2[i, 8*len(chars_vec) : len(testX2)] = testX[i,8:]
-        except:
-            print("Missing one hot vector for:", testX[i,j])
+        testX2[i, j*len(chars_vec) : (j+1)*len(chars_vec)] = chars[testX[i,j]]
+        testX2[i, 8*len(chars_vec) : len(testX2)] = testX[i,8:]
 
 #Hyperparameters
 n_features = len(trainX2[0])
-epochs = 20
+epochs = 15
 batch_size = 100
 dropout = 0.5
-n_neurons = 5000
-n_hidden_layers = 2
+n_neurons = 4000
+n_hidden_layers = 4
 
 #Neural network
 model = Sequential()
@@ -60,7 +66,7 @@ for i in range(0,n_hidden_layers):
     model.add(Dropout(dropout))
 model.add(Dense(1, activation='relu'))
 
-model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='poisson', optimizer='adam', metrics=['accuracy'])
 
 #Train
 model.fit(trainX2, trainY, epochs=epochs, batch_size=batch_size, verbose=1, shuffle=True)
